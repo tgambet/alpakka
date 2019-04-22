@@ -30,7 +30,7 @@ protected[ftp] trait FtpLike[FtpClient, S <: RemoteFileSettings] {
 
   def listFiles(handler: Handler): immutable.Seq[FtpFile]
 
-  def retrieveFileInputStream(name: String, handler: Handler): Try[InputStream]
+  def retrieveFileInputStream(name: String, handler: Handler, offset: Long): Try[InputStream]
 
   def storeFileOutputStream(name: String, handler: Handler, append: Boolean): Try[OutputStream]
 

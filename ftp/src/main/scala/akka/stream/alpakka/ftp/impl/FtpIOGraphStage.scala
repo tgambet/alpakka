@@ -5,17 +5,16 @@
 package akka.stream.alpakka.ftp
 package impl
 
+import java.io.{IOException, InputStream, OutputStream}
+
+import akka.annotation.InternalApi
 import akka.stream.impl.Stages.DefaultAttributes.IODispatcher
 import akka.stream.stage.{GraphStageWithMaterializedValue, InHandler, OutHandler}
-import akka.stream.{Attributes, IOResult, Inlet, Outlet, Shape, SinkShape, SourceShape}
+import akka.stream._
 import akka.util.ByteString
 import akka.util.ByteString.ByteString1C
 
 import scala.concurrent.{Future, Promise}
-import java.io.{IOException, InputStream, OutputStream}
-
-import akka.annotation.InternalApi
-
 import scala.util.control.NonFatal
 
 /**
@@ -49,6 +48,7 @@ private[ftp] trait FtpIOSourceStage[FtpClient, S <: RemoteFileSettings]
     extends FtpIOGraphStage[FtpClient, S, SourceShape[ByteString]] {
 
   def chunkSize: Int
+  def offset: Long
 
   val shape: SourceShape[ByteString] = SourceShape(Outlet[ByteString](s"$name.out"))
   val out: Outlet[ByteString] = shape.outlets.head.asInstanceOf[Outlet[ByteString]]
@@ -103,7 +103,7 @@ private[ftp] trait FtpIOSourceStage[FtpClient, S <: RemoteFileSettings]
         }
 
       protected[this] def doPreStart(): Unit =
-        isOpt = Some(ftpLike.retrieveFileInputStream(path, handler.get).get)
+        isOpt = Some(ftpLike.retrieveFileInputStream(path, handler.get, offset).get)
 
       protected[this] def matSuccess(): Boolean =
         matValuePromise.trySuccess(IOResult.createSuccessful(readBytesTotal))

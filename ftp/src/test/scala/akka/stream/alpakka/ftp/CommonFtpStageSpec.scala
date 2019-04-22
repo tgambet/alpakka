@@ -4,21 +4,21 @@
 
 package akka.stream.alpakka.ftp
 
+import java.net.InetAddress
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.{Files, Paths}
+
 import akka.stream.IOResult
 import akka.stream.alpakka.ftp.SftpSupportImpl.{CLIENT_PRIVATE_KEY_PASSPHRASE => ClientPrivateKeyPassphrase}
 import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.testkit.scaladsl.StreamTestKit.assertAllStagesStopped
 import akka.stream.testkit.scaladsl.TestSink
 import akka.util.ByteString
+import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration._
 import scala.util.Random
-import java.nio.file.attribute.PosixFilePermission
-import java.nio.file.{Files, Paths}
-import java.net.InetAddress
-
-import akka.stream.testkit.scaladsl.StreamTestKit.assertAllStagesStopped
-import org.scalatest.concurrent.Eventually
 
 final class FtpStageSpec extends BaseFtpSpec with CommonFtpStageSpec
 final class SftpStageSpec extends BaseSftpSpec with CommonFtpStageSpec
@@ -157,6 +157,18 @@ trait CommonFtpStageSpec extends BaseSpec with Eventually {
       result.futureValue shouldBe IOResult.createSuccessful(expectedNumOfBytes)
     }
 
+    "retrieve a file from path with offset as a stream of bytes" in assertAllStagesStopped {
+      val fileName = "sample_io"
+      val offset = 10L
+      putFileOnFtp(FtpBaseSupport.FTP_ROOT_DIR, fileName)
+      val (result, probe) =
+        retrieveFromPathWithOffset(s"/$fileName", offset).toMat(TestSink.probe)(Keep.both).run()
+      probe.request(100).expectNextOrComplete()
+
+      val expectedNumOfBytes = getLoremIpsum.getBytes().length - offset
+      result.futureValue shouldBe IOResult.createSuccessful(expectedNumOfBytes)
+    }
+
     "retrieve a bigger file (~2 MB) from path as a stream of bytes" in assertAllStagesStopped {
       val fileName = "sample_bigger_file"
       val fileContents = new Array[Byte](2000020)
@@ -166,6 +178,19 @@ trait CommonFtpStageSpec extends BaseSpec with Eventually {
       probe.request(1000).expectNextOrComplete()
 
       val expectedNumOfBytes = fileContents.length
+      result.futureValue shouldBe IOResult.createSuccessful(expectedNumOfBytes)
+    }
+
+    "retrieve a bigger file (~2 MB) from path with offset as a stream of bytes" in assertAllStagesStopped {
+      val fileName = "sample_bigger_file"
+      val fileContents = new Array[Byte](2000020)
+      val offset = 1000010L
+      Random.nextBytes(fileContents)
+      putFileOnFtpWithContents(FtpBaseSupport.FTP_ROOT_DIR, fileName, fileContents)
+      val (result, probe) = retrieveFromPathWithOffset(s"/$fileName", offset).toMat(TestSink.probe)(Keep.both).run()
+      probe.request(1000).expectNextOrComplete()
+
+      val expectedNumOfBytes = fileContents.length - offset
       result.futureValue shouldBe IOResult.createSuccessful(expectedNumOfBytes)
     }
   }

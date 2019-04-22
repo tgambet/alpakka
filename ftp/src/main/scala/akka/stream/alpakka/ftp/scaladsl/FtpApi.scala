@@ -122,14 +122,16 @@ sealed trait FtpApi[FtpClient] { _: FtpSourceFactory[FtpClient] =>
    * @param path the file path
    * @param connectionSettings connection settings
    * @param chunkSize the size of transmitted [[akka.util.ByteString ByteString]] chunks
+   * @param offset the offset into the remote file at which to start the transfer
    * @return A [[akka.stream.scaladsl.Source Source]] of [[akka.util.ByteString ByteString]] that materializes to a [[scala.concurrent.Future Future]] of [[IOResult]]
    */
   def fromPath(
       path: String,
       connectionSettings: S,
-      chunkSize: Int = DefaultChunkSize
+      chunkSize: Int = DefaultChunkSize,
+      offset: Long = 0L
   ): Source[ByteString, Future[IOResult]] =
-    Source.fromGraph(createIOSource(path, connectionSettings, chunkSize))
+    Source.fromGraph(createIOSource(path, connectionSettings, chunkSize, offset))
 
   /**
    * Scala API: creates a [[akka.stream.scaladsl.Sink Sink]] of [[akka.util.ByteString ByteString]] to some file path.
