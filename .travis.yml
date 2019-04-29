@@ -58,7 +58,8 @@ jobs:
     - env:
       - DIR=ftp
       - PRE_CMD="docker-compose up -d ftp sftp"
-      script: sbt ftp/test
+      script:
+        - ./scripts/buildChanged.sh ${DIR:=.} "${JDK:=adopt@~1.8.202-08}" "${PRE_CMD:=echo NOOP}" "${CMD:=+$DIR/test}"
     - env:
       - DIR=geode
       - PRE_CMD="docker-compose up -d geode"
